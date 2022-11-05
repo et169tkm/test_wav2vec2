@@ -8,26 +8,103 @@ __version__ = "0.1.0"
 __license__ = "MIT"
 
 import argparse
+import io
+import speech_recognition as sr
+import sys
+import torch
 
+from os import path
+from pydub import AudioSegment
+from pydub.silence import split_on_silence
+from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+
+# https://huggingface.co/facebook/wav2vec2-base-960h
+MODEL='facebook/wav2vec2-base-960h'
+# https://huggingface.co/facebook/wav2vec2-large-960h
+#MODEL='facebook/wav2vec2-large-960h'
+# https://huggingface.co/speech-seq2seq/wav2vec2-2-bert-large
+# MODEL='speech-seq2seq/wav2vec2-2-bert-large' # doesn't seem to work, tokens can't be translated back to text
+SAMPLING_RATE=16000 # the model only support this exact sampling rate
+
+def transcribe(in_path, default_silence_threshold):
+  tokenizer = Wav2Vec2Processor.from_pretrained(MODEL)
+  model = Wav2Vec2ForCTC.from_pretrained(MODEL)
+
+  recognizer = sr.Recognizer()
+  log("Loading file")
+  audio_file = AudioSegment.from_mp3(in_path)
+  log("Split file based on silence")
+  chunks = split_on_silence(audio_file, min_silence_len=300, silence_thresh=-40, keep_silence=True) # keep the silence so that we can calculate the offset of a chunk base on the length of previosu chunks
+  log("Chunk count: %d" % len(chunks))
+
+  offset_ms=0.0
+  chunk_index = 0
+  output = []
+  for chunk in chunks:
+    log("processing chunk %d/%d" % (chunk_index, len(chunks)))
+    chunk_index += 1
+    #chunk.export("temp/%04d.mp3" % i, format="mp3")
+
+    # resample
+    log("resampling")
+    clip = chunk.set_frame_rate(SAMPLING_RATE) # numpy array
+    # convert to tensor
+    log("conveting to FloatTensor")
+    x = torch.FloatTensor(clip.get_array_of_samples()) # tensor
+    log("float tensor:")
+    log(x.shape)
+
+    log("tokenizing")
+    inputs = tokenizer(x, sampling_rate=SAMPLING_RATE, return_tensors='pt', padding='longest').input_values
+    log("tokens")
+    log(inputs.shape)
+    #log(inputs)
+    log("getting logits")
+    logits = model(inputs).logits
+    log("logits:")
+    log(logits.shape)
+    #log(logits)
+    log("argmax logits")
+    tokens = torch.argmax(logits, axis=-1)
+    log("tokens")
+    log(tokens.shape)
+    #log(tokens)
+    log("decoding tokens")
+    text = tokenizer.batch_decode(tokens)[0] # convert tokens to string
+
+    print("%04d,%s,%s" % (chunk_index, format_time_from_sec(offset_ms/1000.0), text))
+    offset_ms += len(chunk)
+
+def format_time_from_sec(sec):
+  h = "%02d" % int(sec // 3600)
+  m = "%02d" % int((sec % 3600) // 60)
+  s = "%02d" % int(sec % 60)
+  ms = "%03d" % int((sec * 1000) % 1000)
+  return "%s:%s:%s.%s" % (h, m, s, ms)
+
+def log(message):
+  print(message, file=sys.stderr)
 
 def main(args):
   """ Main entry point of the app """
-  print("hello world")
-  print(args)
-
+  log(args)
+  transcribe(args.in_path, args.silence_threshold)
 
 if __name__ == "__main__":
   """ This is executed when run from the command line """
   parser = argparse.ArgumentParser()
 
   # Required positional argument
-  parser.add_argument("arg", help="Required positional argument")
+  #parser.add_argument("arg", help="Required positional argument")
 
   # Optional argument flag which defaults to False
-  parser.add_argument("-f", "--flag", action="store_true", default=False)
+  #parser.add_argument("-f", "--flag", action="store_true", default=False)
 
   # Optional argument which requires a parameter (eg. -d test)
-  parser.add_argument("-n", "--name", action="store", dest="name")
+  #parser.add_argument("-n", "--name", action="store", dest="name")
+
+  parser.add_argument("-i", "--in", action="store", dest="in_path")
+  parser.add_argument("-s", "--silence-threshold", action="store", dest="silence_threshold", default=-40)
 
   # Optional verbosity counter (eg. -v, -vv, -vvv, etc.)
   parser.add_argument(
