@@ -26,6 +26,26 @@ MODEL='facebook/wav2vec2-base-960h'
 # MODEL='speech-seq2seq/wav2vec2-2-bert-large' # doesn't seem to work, tokens can't be translated back to text
 SAMPLING_RATE=16000 # the model only support this exact sampling rate
 
+MIN_CHUNK_LENGTH_MS=10000 # it's faster to infer on bigger chunks than a lot of smaller chunks (it might be more accurate too because the model has more context)
+
+def join_short_chunks(in_chunks, min_length_ms):
+  temp_chunks = list(in_chunks)
+  i = 0
+  while True:
+    if i >= len(temp_chunks) - 1: # minus one because we don't need to check the last chunk
+      break
+
+    chunk = temp_chunks[i]
+    if len(chunk) >= min_length_ms:
+      # this chunk is long enough, go on to the next one
+      i += 1
+      continue
+    
+    next_chunk = temp_chunks.pop(i+1)
+    #log("i=%d: Chunk too short (%dms), concating next chunk(%dms)" % (i, len(chunk), len(next_chunk)))
+    temp_chunks[i] = chunk + next_chunk
+  return temp_chunks
+
 def transcribe(in_path, default_silence_threshold):
   tokenizer = Wav2Vec2Processor.from_pretrained(MODEL)
   model = Wav2Vec2ForCTC.from_pretrained(MODEL)
@@ -35,6 +55,9 @@ def transcribe(in_path, default_silence_threshold):
   audio_file = AudioSegment.from_mp3(in_path)
   log("Split file based on silence")
   chunks = split_on_silence(audio_file, min_silence_len=300, silence_thresh=-40, keep_silence=True) # keep the silence so that we can calculate the offset of a chunk base on the length of previosu chunks
+  log("Chunk count: %d" % len(chunks))
+  log("Join short segments")
+  chunks = join_short_chunks(chunks, 10000)
   log("Chunk count: %d" % len(chunks))
 
   offset_ms=0.0
