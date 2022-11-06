@@ -28,6 +28,8 @@ SAMPLING_RATE=16000 # the model only support this exact sampling rate
 
 MIN_CHUNK_LENGTH_MS=10000 # it's faster to infer on bigger chunks than a lot of smaller chunks (it might be more accurate too because the model has more context)
 
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 def join_short_chunks(in_chunks, min_length_ms):
   temp_chunks = list(in_chunks)
   i = 0
@@ -48,7 +50,7 @@ def join_short_chunks(in_chunks, min_length_ms):
 
 def transcribe(in_path, default_silence_threshold):
   tokenizer = Wav2Vec2Processor.from_pretrained(MODEL)
-  model = Wav2Vec2ForCTC.from_pretrained(MODEL)
+  model = Wav2Vec2ForCTC.from_pretrained(MODEL).to(DEVICE)
 
   recognizer = sr.Recognizer()
   log("Loading file")
@@ -73,12 +75,12 @@ def transcribe(in_path, default_silence_threshold):
     clip = chunk.set_frame_rate(SAMPLING_RATE) # numpy array
     # convert to tensor
     log("conveting to FloatTensor")
-    x = torch.FloatTensor(clip.get_array_of_samples()) # tensor
+    x = torch.FloatTensor(clip.get_array_of_samples()).to(DEVICE) # tensor
     log("float tensor:")
     log(x.shape)
 
     log("tokenizing")
-    inputs = tokenizer(x, sampling_rate=SAMPLING_RATE, return_tensors='pt', padding='longest').input_values
+    inputs = tokenizer(x, sampling_rate=SAMPLING_RATE, return_tensors='pt', padding='longest').input_values.to(DEVICE)
     log("tokens")
     log(inputs.shape)
     #log(inputs)
