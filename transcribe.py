@@ -51,7 +51,8 @@ def join_short_chunks(in_chunks, min_length_ms):
 
 def transcribe(in_path, default_silence_threshold):
   tokenizer = Wav2Vec2Processor.from_pretrained(MODEL)
-  model = Wav2Vec2ForCTC.from_pretrained(MODEL).to(DEVICE)
+  model = Wav2Vec2ForCTC.from_pretrained(MODEL).half().to(DEVICE)
+  log("model dtype: %s" % model.dtype)
 
   recognizer = sr.Recognizer()
   log("Loading file")
@@ -76,12 +77,13 @@ def transcribe(in_path, default_silence_threshold):
     clip = chunk.set_frame_rate(SAMPLING_RATE) # numpy array
     # convert to tensor
     log("conveting to FloatTensor")
-    x = torch.FloatTensor(clip.get_array_of_samples()).to(DEVICE) # tensor
+    x = torch.HalfTensor(clip.get_array_of_samples())
     log("float tensor:")
     log(x.shape)
 
     log("tokenizing")
-    inputs = tokenizer(x, sampling_rate=SAMPLING_RATE, return_tensors='pt', padding='longest').input_values.to(DEVICE)
+    inputs = tokenizer(x, sampling_rate=SAMPLING_RATE, return_tensors='pt', padding='longest').input_values
+    inputs = inputs.half().to(DEVICE)
     log("tokens")
     log(inputs.shape)
     #log(inputs)
