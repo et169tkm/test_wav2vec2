@@ -54,7 +54,7 @@ def transcribe(in_path, default_silence_threshold):
   model = Wav2Vec2ForCTC.from_pretrained(MODEL).half().to(DEVICE)
   log("model dtype: %s" % model.dtype)
 
-  recognizer = sr.Recognizer()
+  #recognizer = sr.Recognizer()
   log("Loading file")
   audio_file = AudioSegment.from_mp3(in_path)
   log("Split file based on silence")
