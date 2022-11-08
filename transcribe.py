@@ -58,17 +58,17 @@ def transcribe(in_path, default_silence_threshold):
   log("Loading file")
   audio_file = AudioSegment.from_mp3(in_path)
   log("Split file based on silence")
-  chunks = split_on_silence(audio_file, min_silence_len=300, silence_thresh=-40, keep_silence=True) # keep the silence so that we can calculate the offset of a chunk base on the length of previosu chunks
+  chunks = split_on_silence(audio_file, min_silence_len=40, silence_thresh=-40, keep_silence=True) # keep the silence so that we can calculate the offset of a chunk base on the length of previosu chunks
   log("Chunk count: %d" % len(chunks))
   log("Join short segments")
-  chunks = join_short_chunks(chunks, 10000)
+  chunks = join_short_chunks(chunks, 5000)
   log("Chunk count: %d" % len(chunks))
 
   offset_ms=0.0
   chunk_index = 0
   output = []
   for chunk in chunks:
-    log("processing chunk %d/%d" % (chunk_index, len(chunks)))
+    log("processing chunk %d/%d, offset(ms): %.02f" % (chunk_index, len(chunks), offset_ms))
     chunk_index += 1
     #chunk.export("temp/%04d.mp3" % i, format="mp3")
 
