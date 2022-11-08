@@ -18,6 +18,7 @@ from pydub import AudioSegment
 from pydub.silence import split_on_silence
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 
+# Blog post explaining this: https://distill.pub/2017/ctc/
 # https://huggingface.co/facebook/wav2vec2-base-960h
 MODEL='facebook/wav2vec2-base-960h'
 # https://huggingface.co/facebook/wav2vec2-large-960h
