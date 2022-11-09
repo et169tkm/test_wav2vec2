@@ -31,7 +31,7 @@ from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 MODEL='jonatasgrosman/wav2vec2-large-xlsr-53-english'
 SAMPLING_RATE=16000 # the model only support this exact sampling rate
 
-MIN_CHUNK_LENGTH_MS=10000 # it's faster to infer on bigger chunks than a lot of smaller chunks (it might be more accurate too because the model has more context)
+MIN_CHUNK_LENGTH_MS=15000 # it's faster to infer on bigger chunks than a lot of smaller chunks (it might be more accurate too because the model has more context)
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 MODEL_DTYPE = torch.HalfTensor
@@ -73,7 +73,7 @@ def transcribe(in_path, default_silence_threshold):
   chunks = split_on_silence(audio_file, min_silence_len=40, silence_thresh=-40, keep_silence=True) # keep the silence so that we can calculate the offset of a chunk base on the length of previosu chunks
   log("Chunk count: %d" % len(chunks))
   log("Join short segments")
-  chunks = join_short_chunks(chunks, 15000)
+  chunks = join_short_chunks(chunks, MIN_CHUNK_LENGTH_MS)
   log("Chunk count: %d" % len(chunks))
 
   offset_ms=0.0
