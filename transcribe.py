@@ -102,20 +102,20 @@ def transcribe(in_path, default_silence_threshold):
     logits = model(inputs).logits
     log_gpu()
     del inputs
-    torch.cuda.empty_cache()
+    #torch.cuda.empty_cache()
     log("logits (%s, %s): %s" % (logits.dtype, logits.get_device(), list(logits.shape)))
     log_gpu()
     log("argmax logits")
     tokens = torch.argmax(logits, axis=-1)
     log_gpu()
     del logits
-    torch.cuda.empty_cache()
+    #torch.cuda.empty_cache()
     log("tokens (%s, %s): %s" % (tokens.dtype, tokens.get_device(),  list(tokens.shape)))
     log_gpu()
     log("decoding tokens")
     text = tokenizer.batch_decode(tokens)[0] # convert tokens to string
     del tokens 
-    torch.cuda.empty_cache()
+    #torch.cuda.empty_cache()
 
 
     print("%04d,%s,%s" % (chunk_index, format_time_from_sec(offset_ms/1000.0), text))
