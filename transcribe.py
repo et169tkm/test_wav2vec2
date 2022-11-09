@@ -118,7 +118,8 @@ def transcribe(in_path, default_silence_threshold):
     #torch.cuda.empty_cache()
 
 
-    print("%04d,%s,%s" % (chunk_index, format_time_from_sec(offset_ms/1000.0), text))
+    #print("%04d,%s,%s" % (chunk_index, format_time_from_sec(offset_ms/1000.0), text))
+    print("%s,%s" % (format_time_from_sec(offset_ms/1000.0), text))
     offset_ms += len(chunk)
 
 def format_time_from_sec(sec):
