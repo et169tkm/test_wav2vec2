@@ -81,7 +81,7 @@ def transcribe(in_path, default_silence_threshold):
   output = []
   for chunk_index in tqdm.tqdm(range(len(chunks))):
     chunk = chunks[chunk_index]
-    log("processing chunk %d/%d, offset(ms): %.02f" % (chunk_index, len(chunks), offset_ms))
+    log("processing chunk %d/%d, offset: %.02fs" % (chunk_index, len(chunks), offset_ms/1000))
     #chunk.export("temp/%04d.mp3" % i, format="mp3")
 
     # resample
@@ -95,7 +95,7 @@ def transcribe(in_path, default_silence_threshold):
     log("tokenizing")
     inputs = tokenizer(x, sampling_rate=SAMPLING_RATE, return_tensors='pt', padding='longest').input_values
     inputs = inputs.type(MODEL_DTYPE).to(DEVICE)
-    log("input (%s) length: %d, duration: %f" % (inputs.dtype, inputs.shape[1], len(chunk)))
+    log("input (%s) length: %d, duration: %.02fs" % (inputs.dtype, inputs.shape[1], len(chunk)/1000))
     log_gpu()
 
     log("getting logits")
