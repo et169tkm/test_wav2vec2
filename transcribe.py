@@ -32,9 +32,11 @@ MODEL='jonatasgrosman/wav2vec2-large-xlsr-53-english'
 SAMPLING_RATE=16000 # the model only support this exact sampling rate
 
 MIN_CHUNK_LENGTH_MS=15000 # it's faster to infer on bigger chunks than a lot of smaller chunks (it might be more accurate too because the model has more context)
+MAX_CHUNK_LENGTH_MS_FOR_GPU=25000 # if the chunk is longer than this, then use the model in CPU instead because GPU doesn't have enough memory
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-MODEL_DTYPE = torch.HalfTensor
+MODEL_DTYPE_GPU = torch.HalfTensor
+MODEL_DTYPE_CPU = torch.FloatTensor
 SHOULD_SHOW_GPU = False
 
 def join_short_chunks(in_chunks, min_length_ms):
@@ -58,9 +60,11 @@ def join_short_chunks(in_chunks, min_length_ms):
 def transcribe(in_path, default_silence_threshold):
   log("Loading tokenizer")
   tokenizer = Wav2Vec2Processor.from_pretrained(MODEL)
-  log("Loading model")
-  model = Wav2Vec2ForCTC.from_pretrained(MODEL).type(MODEL_DTYPE).to(DEVICE)
-  log("model dtype: %s" % model.dtype)
+  log("Loading model to GPU")
+  model_gpu = Wav2Vec2ForCTC.from_pretrained(MODEL).type(MODEL_DTYPE_GPU).to(DEVICE)
+  log("Loading model to CPU")
+  model_cpu = Wav2Vec2ForCTC.from_pretrained(MODEL).type(MODEL_DTYPE_CPU)
+  log("model dtype: %s" % model_gpu.dtype)
   log_gpu()
 
   #recognizer = sr.Recognizer()
@@ -83,23 +87,31 @@ def transcribe(in_path, default_silence_threshold):
     chunk = chunks[chunk_index]
     log("processing chunk %d/%d, offset: %.02fs" % (chunk_index, len(chunks), offset_ms/1000))
     #chunk.export("temp/%04d.mp3" % i, format="mp3")
+    use_gpu = (len(chunk) <= MAX_CHUNK_LENGTH_MS_FOR_GPU)
+    log("use gpu: %s" % use_gpu)
 
-    # resample
-    log("resampling")
-    clip = chunk # numpy array
     # convert to tensor
     log("conveting to Tensor")
-    x = MODEL_DTYPE(clip.get_array_of_samples())
+    if use_gpu:
+      x = MODEL_DTYPE_GPU(chunk.get_array_of_samples())
+    else:
+      x = MODEL_DTYPE_CPU(chunk.get_array_of_samples())
     log("sample tensor (%s) :(%s)" % (x.dtype, list(x.shape)))
 
     log("tokenizing")
     inputs = tokenizer(x, sampling_rate=SAMPLING_RATE, return_tensors='pt', padding='longest').input_values
-    inputs = inputs.type(MODEL_DTYPE).to(DEVICE)
+    if use_gpu:
+      inputs = inputs.type(MODEL_DTYPE_GPU).to(DEVICE)
+    else:
+      inputs = inputs.type(MODEL_DTYPE_CPU)
     log("input (%s) length: %d, duration: %.02fs" % (inputs.dtype, inputs.shape[1], len(chunk)/1000))
     log_gpu()
 
     log("getting logits")
-    logits = model(inputs).logits
+    if use_gpu:
+      logits = model_gpu(inputs).logits
+    else:
+      logits = model_cpu(inputs).logits
     log_gpu()
     del inputs
     #torch.cuda.empty_cache()
