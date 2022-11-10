@@ -83,29 +83,31 @@ def transcribe(in_path, default_silence_threshold):
   output = []
   for chunk_index in tqdm.tqdm(range(len(chunks)), desc=path.basename(in_path)):
     chunk = chunks[chunk_index]
-    log("processing chunk %d/%d, offset: %.02fs" % (chunk_index, len(chunks), offset_ms/1000))
+    #log("processing chunk %d/%d, offset: %.02fs" % (chunk_index, len(chunks), offset_ms/1000))
     #chunk.export("temp/%04d.mp3" % i, format="mp3")
     use_gpu = (len(chunk) <= MAX_CHUNK_LENGTH_MS_FOR_GPU)
-    log("use gpu: %s" % use_gpu)
+    #log("use gpu: %s" % use_gpu)
+    if not use_gpu:
+      log("Using CPU to process chunk, i: %d, len: %.02fs" % (chunk_index, len(chunk)))
 
     # convert to tensor
-    log("conveting to Tensor")
+    #log("conveting to Tensor")
     if use_gpu:
       x = MODEL_DTYPE_GPU(chunk.get_array_of_samples())
     else:
       x = MODEL_DTYPE_CPU(chunk.get_array_of_samples())
-    log("sample tensor (%s) :(%s)" % (x.dtype, list(x.shape)))
+    #log("sample tensor (%s) :(%s)" % (x.dtype, list(x.shape)))
 
-    log("tokenizing")
+    #log("tokenizing")
     inputs = tokenizer(x, sampling_rate=SAMPLING_RATE, return_tensors='pt', padding='longest').input_values
     if use_gpu:
       inputs = inputs.type(MODEL_DTYPE_GPU).to(DEVICE)
     else:
       inputs = inputs.type(MODEL_DTYPE_CPU)
-    log("input (%s) length: %d, duration: %.02fs" % (inputs.dtype, inputs.shape[1], len(chunk)/1000))
+    #log("input (%s) length: %d, duration: %.02fs" % (inputs.dtype, inputs.shape[1], len(chunk)/1000))
     log_gpu()
 
-    log("getting logits")
+    #log("getting logits")
     if use_gpu:
       logits = model_gpu(inputs).logits
     else:
@@ -113,16 +115,16 @@ def transcribe(in_path, default_silence_threshold):
     log_gpu()
     del inputs
     #torch.cuda.empty_cache()
-    log("logits (%s, %s): %s" % (logits.dtype, logits.get_device(), list(logits.shape)))
+    #log("logits (%s, %s): %s" % (logits.dtype, logits.get_device(), list(logits.shape)))
     log_gpu()
-    log("argmax logits")
+    #log("argmax logits")
     tokens = torch.argmax(logits, axis=-1)
     log_gpu()
     del logits
     #torch.cuda.empty_cache()
-    log("tokens (%s, %s): %s" % (tokens.dtype, tokens.get_device(),  list(tokens.shape)))
+    #log("tokens (%s, %s): %s" % (tokens.dtype, tokens.get_device(),  list(tokens.shape)))
     log_gpu()
-    log("decoding tokens")
+    #log("decoding tokens")
     text = tokenizer.batch_decode(tokens)[0] # convert tokens to string
     del tokens 
     #torch.cuda.empty_cache()
