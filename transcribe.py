@@ -10,7 +10,7 @@ __license__ = "MIT"
 import argparse
 import GPUtil
 import io
-import speech_recognition as sr
+#import speech_recognition as sr
 import sys
 import time
 import tqdm
