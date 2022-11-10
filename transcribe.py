@@ -81,7 +81,7 @@ def transcribe(in_path, default_silence_threshold):
   offset_ms=0.0
   chunk_index = 0
   output = []
-  for chunk_index in tqdm.tqdm(range(len(chunks))):
+  for chunk_index in tqdm.tqdm(range(len(chunks)), desc=path.basename(in_path)):
     chunk = chunks[chunk_index]
     log("processing chunk %d/%d, offset: %.02fs" % (chunk_index, len(chunks), offset_ms/1000))
     #chunk.export("temp/%04d.mp3" % i, format="mp3")
