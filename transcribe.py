@@ -36,7 +36,7 @@ MAX_CHUNK_LENGTH_MS_FOR_GPU=25000 # if the chunk is longer than this, then use t
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 MODEL_DTYPE_GPU = torch.HalfTensor
-MODEL_DTYPE_CPU = torch.FloatTensor
+MODEL_DTYPE_CPU = torch.FloatTensor # some operation (eg convultion) in HalfTensor is not supported on CPU
 SHOULD_SHOW_GPU = False
 
 def join_short_chunks(in_chunks, min_length_ms):
@@ -64,8 +64,6 @@ def transcribe(in_path, default_silence_threshold):
   model_gpu = Wav2Vec2ForCTC.from_pretrained(MODEL).type(MODEL_DTYPE_GPU).to(DEVICE)
   log("Loading model to CPU")
   model_cpu = Wav2Vec2ForCTC.from_pretrained(MODEL).type(MODEL_DTYPE_CPU)
-  log("model dtype: %s" % model_gpu.dtype)
-  log_gpu()
 
   #recognizer = sr.Recognizer()
   log("Loading file")
