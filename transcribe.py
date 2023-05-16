@@ -95,7 +95,7 @@ def transcribe(in_path, default_silence_threshold):
     chunk = chunks[chunk_index]
     #log("processing chunk %d/%d, offset: %.02fs, duration: %.02fs" % (chunk_index, len(chunks), offset_ms/1000, len(chunk)/1000))
     #chunk.export("temp/%04d.mp3" % i, format="mp3")
-    use_gpu = (len(chunk) <= MAX_CHUNK_LENGTH_MS_FOR_GPU)
+    use_gpu = (len(chunk) <= MAX_CHUNK_LENGTH_MS_FOR_GPU) and (DEVICE.type != "cpu")
     if not use_gpu:
       log("Using CPU to process chunk, i: %d, len: %.02fs, offset: %.02fs" % (chunk_index, len(chunk)/1000, offset_ms/1000))
 
